@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกการเข้าเรียน</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Heroicons for better icons --><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@heroicons/react@1.0.6/dist/index.min.css">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #8B5CF6; /* Purple for loader */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Custom styles for SweetAlert2 */
+        .swal2-title {
+            font-family: 'Sarabun', sans-serif !important;
+            font-weight: 700 !important;
+            color: #333 !important;
+        }
+        .swal2-html-container {
+            font-family: 'Sarabun', sans-serif !important;
+            color: #555 !important;
+        }
+        .swal2-confirm.swal2-styled {
+            background-color: #A78BFA !important; /* Purple tone */
+            font-family: 'Sarabun', sans-serif !important;
+        }
+        .swal2-cancel.swal2-styled {
+            font-family: 'Sarabun', sans-serif !important;
+        }
+        /* Style for tables */
+        .data-table th, .data-table td {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        .data-table th {
+            background-color: #f8fafc;
+            font-weight: 600;
+        }
+        
+        /* Animation for Live Monitor */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .monitor-card {
+            animation: fadeIn 0.5s ease-out;
+        }
+        /* (NEW) Loader for approve buttons */
+        .loader-small {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #8B5CF6;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-100 via-gray-100 to-amber-50 flex items-center justify-center min-h-screen py-10">
+
+    <div class="container mx-auto p-4 max-w-lg" id="main-container">
+        <!-- Page 1: Search Student -->
+        <div id="search-page" class="page active bg-white p-8 rounded-xl shadow-2xl transition-all text-center border-t-4 border-purple-700 relative">
+            
+            <!-- Admin Access Button -->
+            <button id="admin-access-btn" class="absolute top-4 right-4 text-sm text-gray-400 hover:text-purple-700 p-2" title="เข้าสู่ระบบผู้ดูแล">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 1 1 0 000-2zM2 16v2h2v-2H2z" clip-rule="evenodd" />
+                </svg>
+            </button>
+
+            <img src="https://img5.pic.in.th/file/secure-sv1/6fbd9a4581af20c69d724621e8918b43.png" alt="Logo" class="mx-auto h-24 w-auto mb-4">
+            <h1 class="text-3xl font-bold text-purple-800">ระบบบันทึกเข้าเรียน</h1>
+            <p class="text-gray-600 mb-6 text-lg">ปวช.ศูนย์ส่งเสริมการเรียนรู้ระดับอำเภอเมืองนครราชสีมา</p>
+            
+            <div class="border border-purple-200 rounded-lg p-6 text-left bg-purple-50 mt-6"> 
+                <h2 class="text-2xl font-semibold text-center text-purple-700 mb-4 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+                    </svg>
+                    เข้าสู่ระบบบันทึกข้อมูล
+                </h2>
+                <div class="space-y-4">
+                    <label for="student-id-input" class="block text-base font-medium text-gray-700">กรอกรหัสนักศึกษา</label>
+                    <input type="text" id="student-id-input" class="w-full px-4 py-3 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="รหัสนักศึกษา...">
+                    <button id="search-btn" class="w-full bg-purple-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-800 transition-colors flex items-center justify-center space-x-2">
+                        <span id="search-btn-text" class="flex items-center justify-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H3a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                            </svg>
+                            <span>เข้าสู่ระบบ</span>
+                        </span>
+                        <div id="search-loader" class="loader hidden"></div>
+                    </button>
+                </div>
+            </div>
+            <p class="text-center text-sm text-gray-500 mt-8">
+                พัฒนาโดย : ศูนย์ส่งเสริมการเรียนรู้ระดับอำเภอเมืองนครราชสีมา
+            </p>
+        </div>
+
+        <!-- Page 2: Student Info & Attendance -->
+        <div id="info-page" class="page bg-white p-8 rounded-xl shadow-2xl transition-all border-t-4 border-purple-700">
+            <h2 class="text-2xl font-bold text-purple-800 mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002 2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0h4m-4 0h4m-9 8h4m-4 2h4m-4 2h4m-6 4H7a2 2 0 01-2-2v-1a2 2 0 012-2h1"/>
+                </svg>
+                ข้อมูลนักศึกษา
+            </h2>
+            <div id="student-info-display" class="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200 text-gray-800"></div>
+            
+            <div class="mb-4">
+                <button id="show-history-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                         <path fill-rule="evenodd" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" clip-rule="evenodd" />
+                    </svg>
+                    <span>ตรวจสอบประวัติการเข้าเรียน</span>
+                </button>
+            </div>
+
+            <div class="mb-6">
+                <div id="info-datetime-display" class="text-xl text-gray-700 font-semibold text-center mb-4 bg-gray-50 p-3 rounded-lg">
+                    <span id="info-date-span"></span> | <span id="info-time-span"></span>
+                </div>
+                <label for="attendance-date-input" class="block text-base font-medium text-gray-700 mb-1">เลือกวันที่บันทึก (หากไม่เลือก จะเป็นวันที่ปัจจุบัน)</label>
+                <input type="date" id="attendance-date-input" class="w-full px-4 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+
+            <h3 class="text-xl font-semibold text-purple-700 mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                บันทึกการเข้าเรียน
+            </h3>
+
+            <!-- Message for duplicate entry on today's date -->
+            <div id="attendance-lock-message" class="hidden text-center p-4 mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-r-lg shadow-sm">
+                <div class="flex items-center justify-center mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span class="font-bold text-lg">บันทึกข้อมูลสำหรับวันนี้ไปแล้ว</span>
+                </div>
+                <p id="attendance-lock-details" class="text-sm bg-white bg-opacity-50 p-2 rounded"></p> 
+            </div>
+
+            <!-- Wrapper for attendance controls -->
+            <div id="attendance-controls" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <button id="present-btn" data-status="มาเรียน" class="attendance-btn bg-amber-500 text-white font-bold py-3 rounded-lg hover:bg-amber-600 transition-colors flex items-center justify-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <span>มาเรียน</span>
+                    </button>
+                    <button id="absent-btn" data-status="ลา" class="attendance-btn bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                        <span>ลา</span>
+                    </button>
+                </div>
+                <div id="reason-container" class="hidden">
+                    <label for="reason" class="block mb-2 text-base font-medium text-gray-700">เหตุผลการลา:</label>
+                    <textarea id="reason" rows="3" class="w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="เช่น ลาป่วย, ลากิจ"></textarea>
+                </div>
+                <button id="save-btn" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 flex items-center justify-center space-x-2 disabled:bg-gray-400" disabled>
+                    <span id="save-btn-text" class="flex items-center justify-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 14v4h2v-4H9z" />
+                        </svg>
+                        <span>บันทึกข้อมูล</span>
+                    </span>
+                    <div id="save-loader" class="loader hidden"></div>
+                </button>
+            </div>
+
+            <button id="back-btn" class="w-full bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 mt-2 flex items-center justify-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span>ยกเลิกและกลับหน้าแรก</span>
+            </button>
+        </div>
+
+        <!-- Page 3: Admin Dashboard (Unchanged) -->
+        <div id="admin-page" class="page bg-white p-8 rounded-xl shadow-2xl transition-all border-t-4 border-purple-700">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-purple-800 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-2 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V5a1 1 0 00-1.447-.894l-4 2A1 1 0 0011 7v10zM4 17a1 1 0 001.447.894l4-2A1 1 0 0010 15V5a1 1 0 00-1.447-.894l-4 2A1 1 0 004 7v10z" />
+                    </svg>
+                    Dashboard (ผู้ดูแล)
+                </h2>
+                <button id="admin-back-btn" class="text-sm text-gray-500 hover:text-purple-700 flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H3" />
+                    </svg>
+                    <span>กลับหน้าหลัก</span>
+                </button>
+            </div>
+
+            <!-- Summary -->
+            <div class="mb-4">
+                <h3 class="text-xl font-semibold text-gray-700 mb-3">สรุปข้อมูล (วันนี้)</h3>
+                <div id="admin-summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-gray-100 p-4 rounded-lg shadow border border-gray-200 animate-pulse">
+                        <p class="text-sm text-gray-700 font-semibold">กำลังโหลด...</p>
+                        <p class="text-3xl font-bold text-gray-900">...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Admin Tools -->
+            <div class="border-t pt-6">
+                 <h3 class="text-xl font-semibold text-gray-700 mb-4">เครื่องมือผู้ดูแล</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <button id="admin-history-btn" class="w-full bg-indigo-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-indigo-700 flex items-center justify-center space-x-2">
+                        <span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v6a1 1 0 11-2 0V9a1 1 0 011-1zm2 2a1 1 0 10-2 0v4a1 1 0 102 0v-4z" clip-rule="evenodd" />
+                            </svg>
+                            <span>ค้นหาประวัติย้อนหลัง</span>
+                        </span>
+                    </button>
+                    
+                    <button id="admin-live-monitor-btn" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2">
+                        <span id="admin-live-monitor-text">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path fill-rule="evenodd" d="M.458 10C3.732 4.943 9.522 3 10 3s6.268 1.943 9.542 7c-3.274 5.057-9.064 7-9.542 7S3.732 15.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                            </svg>
+                            <span>Live Monitor (วันนี้)</span>
+                        </span>
+                    </button>
+                    
+                    <button id="admin-approval-btn" class="w-full bg-green-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-green-700 flex items-center justify-center space-x-2">
+                        <span id="admin-approval-text">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <span>อนุมัติการเข้าเรียน (วันนี้)</span>
+                        </span>
+                    </button>
+                </div>
+                
+                <div class="mt-4">
+                    <button id="admin-export-btn" class="w-full bg-gray-700 text-white font-bold py-4 px-4 rounded-lg hover:bg-gray-800 flex items-center justify-center space-x-2">
+                        <span id="admin-export-text">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 10-1.09-1.03l-2.955 3.129V2.75z" />
+                                <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5a1.25 1.25 0 01-1.25 1.25H4.75A1.25 1.25 0 013.5 15.25v-2.5z" />
+                            </svg>
+                            <span>ส่งออก CSV (ทั้งหมด)</span>
+                        </span>
+                        <div id="admin-export-loader" class="loader hidden"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Page 4: Live Monitor (MODIFIED) -->
+        <div id="monitor-page" class="page bg-white p-8 rounded-xl shadow-2xl transition-all border-t-4 border-blue-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-bold text-blue-800 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                         <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                         <path fill-rule="evenodd" d="M.458 10C3.732 4.943 9.522 3 10 3s6.268 1.943 9.542 7c-3.274 5.057-9.064 7-9.542 7S3.732 15.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                    </svg>
+                    Live Monitor
+                </h2>
+                <button id="monitor-back-btn" class="text-sm text-gray-500 hover:text-blue-700 flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H3" />
+                    </svg>
+                    <span>กลับหน้า Admin</span>
+                </button>
+            </div>
+
+            <!-- (NEW) Live Monitor Summary Dashboard -->
+            <div class="mb-4">
+                <h3 class="text-xl font-semibold text-gray-700 mb-3">สรุปข้อมูล (วันนี้ - Real-time)</h3>
+                <div id="monitor-summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <!-- Summary cards will be injected here by JS -->
+                    <div class="bg-gray-100 p-4 rounded-lg shadow border border-gray-200">
+                        <p class="text-sm text-gray-700 font-semibold">มาเรียน (ปกติ)</p>
+                        <p class="text-3xl font-bold text-gray-900">...</p>
+                    </div>
+                    <div class="bg-gray-100 p-4 rounded-lg shadow border border-gray-200">
+                        <p class="text-sm text-gray-700 font-semibold">มาสาย</p>
+                        <p class="text-3xl font-bold text-gray-900">...</p>
+                    </div>
+                    <div class="bg-gray-100 p-4 rounded-lg shadow border border-gray-200">
+                        <p class="text-sm text-gray-700 font-semibold">ลา</p>
+                        <p class="text-3xl font-bold text-gray-900">...</p>
+                    </div>
+                    <div class="bg-gray-100 p-4 rounded-lg shadow border border-gray-200">
+                        <p class="text-sm text-gray-700 font-semibold">รวมทั้งหมด</p>
+                        <p class="text-3xl font-bold text-gray-900">...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-4 bg-gray-50 p-3 rounded-lg border-t pt-4">
+                <h3 class="text-xl font-semibold text-gray-700">รายการเข้าเรียน (อัปเดตทุก 5 วินาที)</h3>
+                <div class="flex items-center space-x-2">
+                    <div id="monitor-loader" class="loader hidden"></div>
+                    <span id="monitor-last-updated" class="text-sm text-gray-500"></span>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg shadow-inner max-h-[50vh] overflow-y-auto p-4 space-y-3">
+                <div id="monitor-feed-list">
+                    <!-- New feed items will be injected here by JS -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Page 5: History Search Page (Unchanged) -->
+        <div id="history-page" class="page bg-white p-8 rounded-xl shadow-2xl transition-all border-t-4 border-indigo-700">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-indigo-800 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-2 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v6a1 1 0 11-2 0V9a1 1 0 011-1zm2 2a1 1 0 10-2 0v4a1 1 0 102 0v-4z" clip-rule="evenodd" />
+                    </svg>
+                    ค้นหาประวัติการเข้าเรียน
+                </h2>
+                <button id="history-back-btn" class="text-sm text-gray-500 hover:text-indigo-700 flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H3" />
+                    </svg>
+                    <span>กลับหน้า Dashboard</span>
+                </button>
+            </div>
+
+            <!-- Filters -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-lg border">
+                <!-- Row 1: Date Pickers -->
+                <div>
+                    <label for="history-start-date" class="block text-sm font-medium text-gray-700">วันที่เริ่มต้น:</label>
+                    <input type="date" id="history-start-date" class="mt-1 w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label for="history-end-date" class="block text-sm font-medium text-gray-700">วันที่สิ้นสุด:</label>
+                    <input type="date" id="history-end-date" class="mt-1 w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                 <!-- Row 2: Text Filters (Name) -->
+                <div>
+                    <label for="history-name-filter" class="block text-sm font-medium text-gray-700">ค้นหาตามชื่อ-สกุล:</label>
+                    <input type="text" id="history-name-filter" class="mt-1 w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="เว้นว่างเพื่อดูทั้งหมด...">
+                </div>
+
+                <!-- Row 3: Text Filters (ID & Level) -->
+                <div>
+                    <label for="history-student-id-filter" class="block text-sm font-medium text-gray-700">ค้นหาตามรหัสนักศึกษา:</label>
+                    <input type="text" id="history-student-id-filter" class="mt-1 w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="เว้นว่างเพื่อดูทั้งหมด...">
+                </div>
+                <div>
+                    <label for="history-level-filter" class="block text-sm font-medium text-gray-700">กรองตามระดับชั้น:</label>
+                    <input type="text" id="history-level-filter" class="mt-1 w-full px-3 py-2 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="เช่น 1/1, 1/2">
+                </div>
+                
+                <!-- Row 4: Load Button -->
+                <div class="md:col-span-1 self-end"> 
+                    <button id="history-load-btn" class="w-full bg-purple-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-purple-700 flex items-center justify-center space-x-2">
+                        <span id="history-load-text">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+                            </svg>
+                            <span>โหลดข้อมูล</span>
+                        </span>
+                        <div id="history-load-loader" class="loader hidden"></div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Export Buttons -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <button id="history-export-pdf-btn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 flex items-center justify-center space-x-2">
+                    <span id="history-export-pdf-text">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" />
+                        </svg>
+                        <span>ส่งออก PDF (ที่กรอง)</span>
+                    </span>
+                    <div id="history-export-pdf-loader" class="loader hidden"></div>
+                </button>
+                <button id="history-export-csv-btn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 flex items-center justify-center space-x-2">
+                    <span id="history-export-csv-text">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 10-1.09-1.03l-2.955 3.129V2.75z" />
+                            <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5a1.25 1.25 0 01-1.25 1.25H4.75A1.25 1.25 0 013.5 15.25v-2.5z" />
+                        </svg>
+                        <span>ส่งออก CSV (ที่กรอง)</span>
+                    </span>
+                    <div id="history-export-csv-loader" class="loader hidden"></div>
+                </button>
+            </div>
+
+            <!-- Data Table -->
+            <div class="overflow-x-auto bg-white rounded-lg shadow">
+                <table id="history-table" class="w-full min-w-max text-sm data-table">
+                    <thead>
+                        <tr>
+                            <th>เวลาที่บันทึก</th>
+                            <th>รหัสนักศึกษา</th>
+                            <th>ชื่อ-สกุล</th>
+                            <th>ระดับชั้น</th> 
+                            <th>สถานะ</th>
+                            <th>เหตุผล</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body">
+                        <!-- Data rows will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+            <p id="history-no-data" class="text-center text-gray-500 py-8 hidden">ไม่พบข้อมูลในข่วงวันที่ที่เลือก</p>
+        </div>
+        
+        <!-- Page 6: Approval Page -->
+        <div id="approval-page" class="page bg-white p-8 rounded-xl shadow-2xl transition-all border-t-4 border-green-700">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-green-800 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-2 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    อนุมัติการเข้าเรียน (วันนี้)
+                </h2>
+                <button id="approval-back-btn" class="text-sm text-gray-500 hover:text-green-700 flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H3" />
+                    </svg>
+                    <span>กลับหน้า Dashboard</span>
+                </button>
+            </div>
+
+            <!-- Reload Button -->
+            <div class="flex justify-between items-center mb-4 p-4 bg-gray-50 rounded-lg border">
+                <p class="text-lg font-semibold text-gray-700">รายการที่รอการอนุมัติ (วันนี้)</p>
+                <button id="approval-reload-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2">
+                    <span id="approval-reload-text">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101A7.002 7.002 0 0112.001 4c3.865 0 7 3.134 7 7s-3.135 7-7 7-7-3.134-7-7c0-1.554.504-3.008 1.37-4.162l-1.44-1.44A8.96 8.96 0 003 11c0 4.97 4.029 9 9 9s9-4.03 9-9-4.029-9-9-9C8.349 2 5.093 3.86 3.28 6.536A1 1 0 012 7V3a1 1 0 011-1h1z" clip-rule="evenodd" />
+                        </svg>
+                        <span>โหลดใหม่</span>
+                    </span>
+                    <div id="approval-reload-loader" class="loader hidden"></div>
+                </button>
+            </div>
+
+            <!-- Data Table -->
+            <div class="overflow-x-auto bg-white rounded-lg shadow max-h-[60vh] overflow-y-auto">
+                <table id="approval-table" class="w-full min-w-max text-sm data-table">
+                    <thead>
+                        <tr>
+                            <th>เวลาที่บันทึก</th>
+                            <th>รหัสนักศึกษา</th>
+                            <th>ชื่อ-สกุล</th>
+                            <th>สถานะ</th>
+                            <th>เหตุผล</th>
+                            <th>อนุมัติ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approval-table-body">
+                        <!-- Data rows will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+            <p id="approval-no-data" class="text-center text-gray-500 py-8 hidden">ไม่พบข้อมูลที่รอการอนุมัติ</p>
+        </div>
+        
+    </div>
+
+    <script>
+        // --- URL ---
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxBQG0NjyO5p-8r79PSCOuBRqJBmGUX6Gd6PKAVw1Z7zcALP8higXf9uQtwR_SQIYhl/exec';
+        
+        // --- Geolocation Configuration ---
+        const TARGET_LAT = 14.965961419232366;
+        const TARGET_LNG = 102.0712661588505;
+        const MAX_DISTANCE_METERS = 200;
+
+        // --- State ---
+        let currentStudent = null;
+        let selectedStatus = null;
+        let infoClockInterval = null;
+        let monitorInterval = null; 
+        
+        // --- Page Elements ---
+        const pages = document.querySelectorAll('.page');
+        const mainContainer = document.getElementById('main-container');
+        
+        // --- Page 1: Search ---
+        const searchBtn = document.getElementById('search-btn');
+        const studentIdInput = document.getElementById('student-id-input');
+        const searchLoader = document.getElementById('search-loader');
+        const searchBtnText = document.getElementById('search-btn-text');
+        const adminAccessBtn = document.getElementById('admin-access-btn');
+
+        // --- Page 2: Info ---
+        const studentInfoDisplay = document.getElementById('student-info-display');
+        const presentBtn = document.getElementById('present-btn');
+        const absentBtn = document.getElementById('absent-btn');
+        const reasonContainer = document.getElementById('reason-container');
+        const saveBtn = document.getElementById('save-btn');
+        const backBtn = document.getElementById('back-btn');
+        const saveLoader = document.getElementById('save-loader');
+        const saveBtnText = document.getElementById('save-btn-text');
+        const infoDateSpan = document.getElementById('info-date-span'); 
+        const infoTimeSpan = document.getElementById('info-time-span'); 
+        const attendanceDateInput = document.getElementById('attendance-date-input');
+        const showHistoryBtn = document.getElementById('show-history-btn');
+        
+        // (NEW) Elements for page 2 lock
+        const attendanceControls = document.getElementById('attendance-controls'); 
+        const attendanceLockMessage = document.getElementById('attendance-lock-message');
+        const attendanceLockDetails = document.getElementById('attendance-lock-details');
+
+        // --- Page 3: Admin Dashboard ---
+        const adminSummary = document.getElementById('admin-summary');
+        const adminExportBtn = document.getElementById('admin-export-btn');
+        const adminExportText = document.getElementById('admin-export-text');
+        const adminExportLoader = document.getElementById('admin-export-loader');
+        const adminBackBtn = document.getElementById('admin-back-btn');
+        const adminLiveMonitorBtn = document.getElementById('admin-live-monitor-btn');
+        const adminHistoryBtn = document.getElementById('admin-history-btn'); 
+        const adminApprovalBtn = document.getElementById('admin-approval-btn');
+
+        // --- Page 4: Monitor ---
+        const monitorPage = document.getElementById('monitor-page');
+        const monitorBackBtn = document.getElementById('monitor-back-btn');
+        const monitorLoader = document.getElementById('monitor-loader');
+        const monitorLastUpdated = document.getElementById('monitor-last-updated');
+        const monitorFeedList = document.getElementById('monitor-feed-list'); 
+        const monitorSummary = document.getElementById('monitor-summary'); 
+
+        // --- Page 5: History Search ---
+        const historyPage = document.getElementById('history-page');
+        const historyStartDate = document.getElementById('history-start-date');
+        const historyEndDate = document.getElementById('history-end-date');
+        const historyStudentIdFilter = document.getElementById('history-student-id-filter'); 
+        const historyNameFilter = document.getElementById('history-name-filter'); 
+        const historyLevelFilter = document.getElementById('history-level-filter'); 
+        const historyLoadBtn = document.getElementById('history-load-btn');
+        const historyLoadText = document.getElementById('history-load-text');
+        const historyLoadLoader = document.getElementById('history-load-loader');
+        const historyTableBody = document.getElementById('history-table-body');
+        const historyNoData = document.getElementById('history-no-data');
+        const historyExportPdfBtn = document.getElementById('history-export-pdf-btn'); 
+        const historyExportPdfText = document.getElementById('history-export-pdf-text'); 
+        const historyExportPdfLoader = document.getElementById('history-export-pdf-loader'); 
+        const historyExportCsvBtn = document.getElementById('history-export-csv-btn'); 
+        const historyExportCsvText = document.getElementById('history-export-csv-text'); 
+        const historyExportCsvLoader = document.getElementById('history-export-csv-loader'); 
+        const historyBackBtn = document.getElementById('history-back-btn');
+
+        // --- Page 6: Approval ---
+        const approvalPage = document.getElementById('approval-page');
+        const approvalBackBtn = document.getElementById('approval-back-btn');
+        const approvalReloadBtn = document.getElementById('approval-reload-btn');
+        const approvalReloadText = document.getElementById('approval-reload-text');
+        const approvalReloadLoader = document.getElementById('approval-reload-loader');
+        const approvalTableBody = document.getElementById('approval-table-body');
+        const approvalNoData = document.getElementById('approval-no-data');
+
+        // --- Helper Functions for Geolocation ---
+        function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Earth radius in meters
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI / 180);
+        }
+
+        // --- Core Functions ---
+
+        function showPage(pageId) {
+            pages.forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+
+            mainContainer.classList.remove('max-w-lg', 'max-w-5xl', 'max-w-7xl'); 
+            if (pageId === 'admin-page') {
+                mainContainer.classList.add('max-w-5xl'); 
+            } else if (pageId === 'monitor-page' || pageId === 'history-page' || pageId === 'approval-page') { 
+                mainContainer.classList.add('max-w-7xl');
+            } else {
+                mainContainer.classList.add('max-w-lg');
+            }
+        }
+        
+        function showAlert(title, text, icon = 'error') {
+            Swal.fire({
+                icon: icon,
+                title: title,
+                text: text,
+                confirmButtonText: 'ตกลง'
+            });
+        }
+
+        function playAlertSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+                oscillator.connect(audioContext.destination);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (e) { console.error("Could not play sound:", e); }
+        }
+
+        function showLoading(buttonType, isLoading) {
+            if (buttonType === 'search') {
+                searchLoader.classList.toggle('hidden', !isLoading);
+                searchBtnText.classList.toggle('hidden', isLoading);
+                searchBtn.disabled = isLoading;
+            } else if (buttonType === 'save') {
+                saveLoader.classList.toggle('hidden', !isLoading);
+                saveBtnText.classList.toggle('hidden', isLoading);
+                saveBtn.disabled = isLoading;
+            } else if (buttonType === 'admin-export') {
+                adminExportLoader.classList.toggle('hidden', !isLoading);
+                adminExportText.classList.toggle('hidden', isLoading);
+                adminExportBtn.disabled = isLoading;
+            } else if (buttonType === 'monitor') {
+                monitorLoader.classList.toggle('hidden', !isLoading);
+            } else if (buttonType === 'history-load') {
+                historyLoadLoader.classList.toggle('hidden', !isLoading);
+                historyLoadText.classList.toggle('hidden', isLoading);
+                historyLoadBtn.disabled = isLoading;
+            } else if (buttonType === 'history-export-pdf') { 
+                historyExportPdfLoader.classList.toggle('hidden', !isLoading);
+                historyExportPdfText.classList.toggle('hidden', isLoading);
+                historyExportPdfBtn.disabled = isLoading;
+            } else if (buttonType === 'history-export-csv') { 
+                historyExportCsvLoader.classList.toggle('hidden', !isLoading);
+                historyExportCsvText.classList.toggle('hidden', isLoading);
+                historyExportCsvBtn.disabled = isLoading;
+            } else if (buttonType === 'approval-reload') {
+                approvalReloadLoader.classList.toggle('hidden', !isLoading);
+                approvalReloadText.classList.toggle('hidden', isLoading);
+                approvalReloadBtn.disabled = isLoading;
+            }
+        }
+
+        function resetInfoPageState() {
+            studentIdInput.value = '';
+            currentStudent = null;
+            selectedStatus = null;
+            presentBtn.classList.remove('ring-2', 'ring-offset-2', 'ring-amber-500'); 
+            absentBtn.classList.remove('ring-2', 'ring-offset-2', 'ring-orange-500'); 
+            reasonContainer.classList.add('hidden');
+            document.getElementById('reason').value = '';
+            saveBtn.disabled = true;
+            attendanceDateInput.value = '';
+            if (infoClockInterval) clearInterval(infoClockInterval);
+
+            attendanceLockMessage.classList.add('hidden');
+            attendanceControls.classList.remove('hidden');
+            attendanceDateInput.disabled = false;
+            attendanceLockDetails.innerHTML = '';
+        }
+        
+        async function callApi(payload) {
+            if (WEB_APP_URL === 'YOUR_NEW_WEB_APP_URL_GOES_HERE') {
+                showAlert('ตั้งค่าไม่ถูกต้อง', 'กรุณาตั้งค่า WEB_APP_URL ในไฟล์ HTML (บรรทัดที่ 200) ก่อน', 'error');
+                return { success: false, error: 'Configuration needed' };
+            }
+            try {
+                const urlWithCacheBust = WEB_APP_URL + '?v=' + new Date().getTime();
+                const res = await fetch(urlWithCacheBust, {
+                    method: 'POST',
+                    mode: 'cors',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload),
+                    redirect: 'follow'
+                });
+                const responseText = await res.text();
+                if (!res.ok) throw new Error(`Server responded with status ${res.status}: ${responseText}`);
+                try {
+                    return JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error("Received an invalid response from the server.");
+                }
+            } catch (error) {
+                showAlert('การเชื่อมต่อล้มเหลว', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+                return { success: false, error: error.message };
+            }
+        }
+        
+        function updateDateTime(dateEl, timeEl) {
+            const now = new Date();
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            dateEl.textContent = now.toLocaleDateString('th-TH', dateOptions);
+            timeEl.textContent = "เวลา " + now.toLocaleTimeString('th-TH', timeOptions);
+        }
+        
+        // --- Page 1 Logic ---
+        
+        searchBtn.addEventListener('click', async () => {
+            const studentId = studentIdInput.value.trim();
+            if (!studentId) {
+                showAlert("ข้อมูลไม่ครบถ้วน", "กรุณากรอกรหัสนักศึกษา", 'warning');
+                return;
+            }
+            showLoading('search', true);
+            const response = await callApi({ 
+                action: 'getStudentData', 
+                studentId: studentId,
+                checkToday: true // Tells server to check for today's record
+            });
+            showLoading('search', false);
+            
+            if (response.success) {
+                onStudentFound(response.data);
+            } else if (response.error && !response.error.includes('Failed to fetch')) {
+                onSearchFailure({ message: response.error });
+            }
+        });
+
+        studentIdInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') { event.preventDefault(); searchBtn.click(); }
+        });
+
+        // --- Page 2 Logic (MODIFIED FOR GEOFENCE) ---
+        saveBtn.addEventListener('click', async () => {
+            if (!selectedStatus) return;
+
+            // --- 1. Check Geolocation Support ---
+            if (!navigator.geolocation) {
+                showAlert('ไม่สามารถระบุพิกัดได้', 'เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง (GPS)', 'error');
+                return;
+            }
+
+            // Show loader while checking location
+            showLoading('save', true);
+
+            // --- 2. Get Current Position ---
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+
+                    // --- 3. Calculate Distance ---
+                    const distance = getDistanceFromLatLonInMeters(userLat, userLng, TARGET_LAT, TARGET_LNG);
+                    console.log(`User Location: ${userLat}, ${userLng}`);
+                    console.log(`Distance to target: ${distance} meters`);
+
+                    // --- 4. Check if within range ---
+                    if (distance > MAX_DISTANCE_METERS) {
+                        showLoading('save', false); // Stop loader
+                        showAlert(
+                            'อยู่นอกพื้นที่เช็คชื่อ',
+                            `คุณอยู่ห่างจากจุดเช็คชื่อ ${Math.round(distance)} เมตร\n(กำหนดให้ไม่เกิน ${MAX_DISTANCE_METERS} เมตร)\nกรุณาไปที่วิทยาลัยเพื่อบันทึกเวลาเรียน`,
+                            'warning'
+                        );
+                        return; // Stop execution
+                    }
+
+                    // --- 5. Proceed with Saving (Inside Range) ---
+                    const now = new Date();
+                    const selectedDateStr = attendanceDateInput.value;
+                    let isLate = false;
+
+                    const toYYYYMMDD = (d) => {
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+                    const todayStr = toYYYYMMDD(now);
+
+                    if (!selectedDateStr || selectedDateStr === todayStr) {
+                        isLate = now.getHours() >= 9;
+                    }
+                    
+                    let finalStatus = selectedStatus;
+                    if (selectedStatus === 'มาเรียน' && isLate) {
+                        finalStatus = 'มาเรียน (สาย)';
+                    }
+
+                    let finalTimestamp;
+                    if (selectedDateStr) {
+                        const timeString = now.toTimeString().split(' ')[0];
+                        finalTimestamp = `${selectedDateStr}T${timeString}`; 
+                    } else {
+                        finalTimestamp = now.toISOString();
+                    }
+
+                    const attendanceData = {
+                        studentId: currentStudent.id,
+                        name: currentStudent.name,
+                        status: finalStatus,
+                        reason: document.getElementById('reason').value.trim(),
+                        dateString: finalTimestamp
+                    };
+                    
+                    const response = await callApi({ action: 'recordAttendance', data: attendanceData });
+                    
+                    showLoading('save', false);
+                    if (response.success) {
+                        onRecordSaved(response, attendanceData);
+                    } else {
+                        // (Safety Net) Handle duplicate entry if UI bypass occurred
+                        if (response.error === 'DUPLICATE_ENTRY' && response.data) {
+                            onDuplicateEntry(response.data);
+                        } else {
+                            onSaveFailure({ message: response.error });
+                        }
+                    }
+                },
+                (error) => {
+                    // --- Handle Geolocation Errors ---
+                    showLoading('save', false);
+                    let msg = 'ไม่สามารถดึงข้อมูลตำแหน่งได้';
+                    if (error.code === error.PERMISSION_DENIED) {
+                        msg = 'กรุณากด "อนุญาต" (Allow) ให้เว็บไซต์เข้าถึงตำแหน่งของคุณเพื่อบันทึกเวลาเรียน';
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                        msg = 'ไม่พบสัญญาณ GPS กรุณาลองใหม่อีกครั้ง';
+                    } else if (error.code === error.TIMEOUT) {
+                        msg = 'หมดเวลาในการค้นหาพิกัด กรุณาลองใหม่';
+                    }
+                    showAlert('ข้อผิดพลาดเรื่องตำแหน่ง', msg, 'error');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        });
+
+        document.querySelectorAll('.attendance-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const button = e.currentTarget; 
+                selectedStatus = button.dataset.status;
+                
+                presentBtn.classList.remove('ring-2', 'ring-offset-2', 'ring-amber-500');
+                absentBtn.classList.remove('ring-2', 'ring-offset-2', 'ring-orange-500');
+                
+                button.classList.add('ring-2', 'ring-offset-2', selectedStatus === 'มาเรียน' ? 'ring-amber-500' : 'ring-orange-500');
+                reasonContainer.classList.toggle('hidden', selectedStatus !== 'ลา');
+                saveBtn.disabled = false;
+            });
+        });
+
+        function onStudentFound(student) {
+            currentStudent = student;
+            let gradeDisplay = student.levelDetail || student.grade || 'ไม่ระบุ';
+            if (!student.levelDetail && student.grade && String(student.grade).trim() && !String(student.grade).includes('ปวช')) {
+                gradeDisplay = `ปวช. ${student.grade}`;
+            }
+            studentInfoDisplay.innerHTML = 
+                `<p class="text-lg"><strong>รหัสนักศึกษา:</strong> ${student.id}</p>` +
+                `<p class="text-lg"><strong>ชื่อ-สกุล:</strong> ${student.name}</p>` +
+                `<p class="text-lg"><strong>ระดับชั้น:</strong> ${gradeDisplay}</p>` +
+                `<p class="text-lg"><strong>สาขา:</strong> ${student.major || 'ไม่ระบุ'}</p>` +
+                `<p class="text-lg"><strong>แผนการเรียน:</strong> ${student.plan || 'ไม่ระบุ'}</p>`;
+            
+            showPage('info-page');
+            
+            updateDateTime(infoDateSpan, infoTimeSpan);
+            infoClockInterval = setInterval(() => updateDateTime(infoDateSpan, infoTimeSpan), 1000);
+
+            // (UPDATED) Check for today's record and ALERT if found
+            if (student.todaysRecord) {
+                const record = student.todaysRecord;
+                const time = new Date(record.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+                let statusClass = '';
+                if (record.status.includes('สาย')) statusClass = 'text-red-600 font-bold';
+                else if (record.status === 'ลา') statusClass = 'text-orange-600 font-bold';
+                else statusClass = 'text-blue-600 font-bold';
+                
+                // Set the inline message
+                attendanceLockDetails.innerHTML = `
+                    <div class="mt-2">
+                        สถานะ: <span class="${statusClass}">${record.status}</span> (เวลา ${time} น.)
+                        ${record.reason ? `<br>เหตุผล: ${record.reason}` : ''}
+                    </div>
+                `;
+                
+                // Show the lock UI
+                attendanceLockMessage.classList.remove('hidden');
+                attendanceControls.classList.add('hidden');
+                attendanceDateInput.disabled = true; // Lock date input
+
+                // (NEW) Trigger SweetAlert Popup immediately
+                Swal.fire({
+                    icon: 'info',
+                    title: 'บันทึกข้อมูลแล้ว',
+                    html: `
+                        <p class="mb-2">นักศึกษารหัส <b>${student.id}</b></p>
+                        <p>ได้ทำการบันทึกการเข้าเรียนวันนี้ไปแล้ว</p>
+                        <p class="mt-2 text-sm text-gray-600">สถานะ: <b>${record.status}</b></p>
+                        <p class="text-sm text-gray-600">เวลา: ${time} น.</p>
+                    `,
+                    confirmButtonText: 'รับทราบ',
+                    confirmButtonColor: '#7C3AED'
+                });
+
+            } else {
+                // No record for today, show controls as normal
+                attendanceLockMessage.classList.add('hidden');
+                attendanceControls.classList.remove('hidden');
+                attendanceDateInput.disabled = false;
+            }
+        }
+
+        async function showStudentHistoryModal() {
+            if (!currentStudent) return; 
+
+            Swal.fire({
+                title: 'กำลังโหลดประวัติ...',
+                text: 'กรุณารอสักครู่',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            const response = await callApi({
+                action: 'getStudentHistory',
+                studentId: currentStudent.id
+            });
+
+            if (response.success) {
+                const records = response.data;
+                let historyHtml = '';
+
+                if (!records || records.length === 0) {
+                    historyHtml = '<p class="text-center text-gray-500 p-4">-- ไม่พบประวัติการเข้าเรียน --</p>';
+                } else {
+                    historyHtml = '<div class="space-y-2 text-left max-h-64 overflow-y-auto bg-gray-50 p-3 rounded-lg border">';
+                    for (const record of records) {
+                        const date = new Date(record.timestamp);
+                        const dateStr = date.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+                        const timeStr = date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+                        let statusClass = '';
+                        let statusIcon = '';
+                        if (record.status.includes('สาย')) {
+                            statusClass = 'text-red-600 font-semibold';
+                            statusIcon = '🕒';
+                        } else if (record.status === 'ลา') {
+                            statusClass = 'text-orange-600 font-semibold';
+                            statusIcon = '❌';
+                        } else {
+                            statusClass = 'text-blue-600';
+                            statusIcon = '✅';
+                        }
+                        
+                        historyHtml += `
+                            <div class="text-sm p-2 bg-white rounded shadow-sm border-l-4 ${record.status.includes('สาย') ? 'border-red-400' : (record.status === 'ลา' ? 'border-orange-400' : 'border-blue-400')}">
+                                <div class="flex justify-between items-center">
+                                    <span class="${statusClass}">${statusIcon} ${record.status}</span>
+                                    <span class="text-gray-600 font-medium">${dateStr} (${timeStr} น.)</span>
+                                </div>
+                                ${record.reason ? `<p class="text-xs text-gray-500 pl-5">เหตุผล: ${record.reason}</p>` : ''}
+                            </div>
+                        `;
+                    }
+                    historyHtml += '</div>';
+                }
+
+                Swal.fire({
+                    title: `ประวัติ 20 ครั้งล่าสุด`,
+                    html: historyHtml,
+                    icon: 'info',
+                    confirmButtonText: 'ตกลง'
+                });
+
+            } else {
+                Swal.fire({
+                    title: 'เกิดข้อผิดพลาด',
+                    text: `ไม่สามารถโหลดประวัติได้: ${response.error}`,
+                    icon: 'error',
+                    confirmButtonText: 'ตกลง'
+                });
+            }
+        }
+        
+        showHistoryBtn.addEventListener('click', showStudentHistoryModal);
+
+        function onSearchFailure(error) {
+            showAlert('ไม่พบข้อมูล', `ไม่พบข้อมูลนักศึกษาสำหรับรหัสนี้ หรืออาจเกิดข้อผิดพลาด: ${error.message}`);
+        }
+
+        function onRecordSaved(response, data) {
+            const timestamp = new Date(data.dateString).toLocaleString('th-TH', {
+                year: 'numeric', month: 'long', day: 'numeric', 
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+
+            let statusDisplayHtml = '';
+            let alertTitle = 'บันทึกข้อมูลสำเร็จ!';
+            let alertIcon = 'success';
+
+            if (data.status.includes('สาย')) {
+                playAlertSound();
+                alertTitle = 'บันทึกข้อมูล (มาสาย)';
+                alertIcon = 'warning';
+                statusDisplayHtml = `
+                    <div class="my-4 p-4 bg-red-100 rounded-lg border border-red-300 text-center">
+                        <p class="text-lg font-semibold text-gray-700">สถานะ:</p>
+                        <p class="text-4xl font-bold text-red-600">${data.status}</p>
+                    </div>
+                `;
+            } else if (data.status === 'ลา') {
+                statusDisplayHtml = `
+                    <p><strong>สถานะ:</strong> <span class="font-bold text-orange-600">${data.status}</span></p>
+                    <p><strong>เหตุผล:</strong> ${data.reason || 'ไม่ได้ระบุ'}</p>
+                `;
+            } else { 
+                statusDisplayHtml = `
+                    <p><strong>สถานะ:</strong> <span class="font-bold text-amber-600">${data.status}</span></p>
+                `;
+            }
+
+            const confirmationHtml = `
+                <div class="text-left space-y-2 p-4">
+                    <p><strong>รหัสนักศึกษา:</strong> ${data.studentId}</p>
+                    <p><strong>ชื่อ-สกุล:</strong> ${data.name}</p>
+                    ${statusDisplayHtml} 
+                    <p><strong>เวลาที่บันทึก:</strong> ${timestamp}</p>
+                </div>`;
+
+            Swal.fire({
+                icon: alertIcon,
+                title: alertTitle,
+                html: confirmationHtml,
+                confirmButtonText: 'ตกลง',
+                allowOutsideClick: false
+            }).then(() => {
+                showPage('search-page');
+                resetInfoPageState();
+            });
+        }
+        
+        // (NEW) Alert for duplicate entry response
+        function onDuplicateEntry(record) {
+            const recordDate = new Date(record.timestamp);
+            const dateStr = recordDate.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+            const timeStr = recordDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+            let statusClass = '';
+            if (record.status.includes('สาย')) statusClass = 'text-red-600 font-bold';
+            else if (record.status === 'ลา') statusClass = 'text-orange-600 font-bold';
+            else statusClass = 'text-blue-600 font-bold';
+
+            const html = `
+                <p class="text-lg text-red-600 font-bold mb-2">ไม่สามารถบันทึกซ้ำได้</p>
+                <p class="text-base mb-4">พบข้อมูลที่ถูกบันทึกไว้สำหรับวันที่ <strong>${dateStr}</strong> แล้ว:</p>
+                <div class="text-left p-3 bg-gray-50 rounded-lg border">
+                    <p><strong>สถานะ:</strong> <span class="${statusClass}">${record.status}</span></p>
+                    <p><strong>เวลา:</strong> ${timeStr} น.</p>
+                    ${record.reason ? `<p><strong>เหตุผล:</strong> ${record.reason}</p>` : ''}
+                </div>
+            `;
+
+            Swal.fire({
+                icon: 'error',
+                title: 'บันทึกข้อมูลซ้ำ',
+                html: html,
+                confirmButtonText: 'ตกลง'
+            }).then(() => {
+                selectedStatus = null;
+                presentBtn.classList.remove('ring-2', 'ring-offset-2', 'ring-amber-500'); 
+                absentBtn.classList.remove('ring-2', 'ring-offset-2', 'ring-orange-500'); 
+                reasonContainer.classList.add('hidden');
+                document.getElementById('reason').value = '';
+                saveBtn.disabled = true;
+            });
+        }
+
+        function onSaveFailure(error) {
+            showAlert('บันทึกไม่สำเร็จ', error.message || 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+        }
+
+        backBtn.addEventListener('click', () => { showPage('search-page'); resetInfoPageState(); });
+
+        // --- Page 3 Admin Dashboard Logic ---
+
+        adminAccessBtn.addEventListener('click', () => {
+            Swal.fire({
+                title: 'เข้าสู่ระบบผู้ดูแล',
+                text: 'กรุณากรอกรหัสผ่าน:',
+                input: 'password',
+                inputPlaceholder: 'รหัสผ่าน...',
+                inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
+                showCancelButton: true,
+                confirmButtonText: 'เข้าสู่ระบบ',
+                cancelButtonText: 'ยกเลิก',
+                showLoaderOnConfirm: true,
+                preConfirm: (password) => {
+                    if (password === 'ADMIN1234') { 
+                        return true;
+                    } else {
+                        Swal.showValidationMessage('รหัสผ่านไม่ถูกต้อง');
+                        return false;
+                    }
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showPage('admin-page');
+                    loadAdminDashboardData(); 
+                }
+            });
+        });
+        
+        function setHistoryDefaultDates() {
+            const today = new Date().toISOString().split('T')[0];
+            historyStartDate.value = today;
+            historyEndDate.value = today;
+        }
+
+        async function loadAdminDashboardData() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            adminSummary.innerHTML = `
+                <div class="bg-gray-100 p-4 rounded-lg shadow border border-gray-200 animate-pulse">
+                    <p class="text-sm text-gray-700 font-semibold">กำลังโหลด...</p>
+                    <p class="text-3xl font-bold text-gray-900">...</p>
+                </div>`;
+
+            const response = await callApi({
+                action: 'getAttendanceData',
+                startDate: today,
+                endDate: today,
+                studentIdFilter: '', 
+                levelFilter: '',
+                nameFilter: '' 
+            });
+            
+            if (response.success && response.data.summary) {
+                displayAdminSummary(response.data.summary);
+            } else {
+                adminSummary.innerHTML = '<p class="text-red-500 col-span-4">ไม่สามารถโหลดข้อมูลสรุปได้</p>';
+            }
+        }
+        
+        function displayAdminSummary(summary) {
+            adminSummary.innerHTML = `
+                <div class="bg-blue-100 p-4 rounded-lg shadow border border-blue-200">
+                    <p class="text-sm text-blue-700 font-semibold">มาเรียน (ปกติ)</p>
+                    <p class="text-3xl font-bold text-blue-900">${summary.present}</p>
+                </div>
+                <div class="bg-red-100 p-4 rounded-lg shadow border border-red-200">
+                    <p class="text-sm text-red-700 font-semibold">มาสาย</p>
+                    <p class="text-3xl font-bold text-red-900">${summary.late}</p>
+                </div>
+                <div class="bg-orange-100 p-4 rounded-lg shadow border border-orange-200">
+                    <p class="text-sm text-orange-700 font-semibold">ลา</p>
+                    <p class="text-3xl font-bold text-orange-900">${summary.absent}</p>
+                </div>
+                <div class="bg-gray-100 p-4 rounded-lg shadow border border-gray-200">
+                    <p class="text-sm text-gray-700 font-semibold">รวมทั้งหมด</p>
+                    <p class="text-3xl font-bold text-gray-900">${summary.total}</p>
+                </div>
+            `;
+        }
+
+        adminBackBtn.addEventListener('click', () => { showPage('search-page'); });
+        
+        adminHistoryBtn.addEventListener('click', () => {
+            showPage('history-page');
+            setHistoryDefaultDates(); 
+            historyTableBody.innerHTML = ''; 
+            historyNoData.classList.add('hidden');
+        });
+
+        adminExportBtn.addEventListener('click', async () => {
+            showLoading('admin-export', true);
+            const response = await callApi({ action: 'getExportData' });
+            showLoading('admin-export', false);
+
+            if (response.success && response.csvData) {
+                try {
+                    const blob = new Blob(["\uFEFF" + response.csvData], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    const dateStr = new Date().toISOString().split('T')[0];
+                    
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `attendance_export_ALL_${dateStr}.csv`);
+                    link.style.visibility = 'hidden';
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                } catch (e) {
+                    showAlert('ส่งออกล้มเหลว', 'เกิดข้อผิดพลาดในการสร้างไฟล์: ' + e.message);
+                }
+            } else {
+                showAlert('ส่งออกล้มเหลว', 'ไม่สามารถดึงข้อมูลสำหรับส่งออกได้: ' + (response.error || 'Unknown error'));
+            }
+        });
+        
+        // --- Page 4 Monitor Logic ---
+
+        adminLiveMonitorBtn.addEventListener('click', () => {
+            showPage('monitor-page');
+            startMonitorPolling();
+        });
+
+        monitorBackBtn.addEventListener('click', () => {
+            showPage('admin-page');
+            stopMonitorPolling();
+        });
+
+        function startMonitorPolling() {
+            stopMonitorPolling(); 
+            fetchMonitorData(true); 
+            monitorInterval = setInterval(() => fetchMonitorData(false), 5000); 
+        }
+
+        function stopMonitorPolling() {
+            if (monitorInterval) {
+                clearInterval(monitorInterval);
+                monitorInterval = null;
+            }
+        }
+
+        async function fetchMonitorData(isInitialLoad) {
+            if (isInitialLoad) {
+                showLoading('monitor', true);
+            }
+            
+            const response = await callApi({ action: 'getTodaysAttendance' });
+            
+            if (isInitialLoad) {
+                showLoading('monitor', false);
+            }
+
+            if (response.success) {
+                displayMonitorData(response.data);
+            }
+            
+            const now = new Date();
+            monitorLastUpdated.textContent = `อัปเดตล่าสุด: ${now.toLocaleTimeString('th-TH')}`;
+        }
+
+        function displayMonitorData(records) {
+            let present = 0;
+            let late = 0;
+            let absent = 0;
+
+            if (records && records.length > 0) {
+                for (const record of records) {
+                    if (record.status.includes('สาย')) {
+                        late++;
+                    } else if (record.status.includes('มาเรียน')) {
+                        present++;
+                    } else if (record.status === 'ลา') {
+                        absent++;
+                    }
+                }
+            }
+            const total = present + late + absent;
+            displayMonitorSummary({ present, late, absent, total });
+
+            monitorFeedList.innerHTML = ''; 
+            
+            if (!records || records.length === 0) {
+                monitorFeedList.innerHTML = '<p class="text-gray-500 text-center p-4 text-lg">ยังไม่มีข้อมูลการเข้าเรียนสำหรับวันนี้</p>';
+                return;
+            }
+            
+            let feedHtml = '';
+            
+            for (const record of records) {
+                const time = new Date(record.timestamp).toLocaleTimeString('th-TH', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+                
+                let iconSvg = '';
+                let borderColor = '';
+                let timeColor = '';
+                let statusText = '';
+
+                if (record.status.includes('สาย')) {
+                    statusText = 'มาเรียน (สาย)';
+                    borderColor = 'border-red-500';
+                    timeColor = 'text-red-600';
+                    iconSvg = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    `;
+                } else if (record.status.includes('มาเรียน')) {
+                    statusText = 'มาเรียน (ปกติ)';
+                    borderColor = 'border-green-500';
+                    timeColor = 'text-green-600';
+                    iconSvg = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    `;
+                }
+                
+                if(statusText) {
+                    const cardHtml = `
+                        <div class="monitor-card bg-white p-4 rounded-xl shadow-lg border-l-8 ${borderColor} flex items-center space-x-4">
+                            <div class="flex-shrink-0">
+                                ${iconSvg}
+                            </div>
+                            <div class="flex-grow">
+                                <p class="text-xl font-bold text-gray-800">${record.name}</p>
+                                <p class="text-base text-gray-500">รหัส: ${record.studentId}</p>
+                            </div>
+                            <div class="text-right flex-shrink-0 w-32"> 
+                                <p class="text-lg font-bold ${timeColor}">${time} น.</p>
+                                <p class="text-sm font-medium ${timeColor}">${statusText}</p>
+                            </div>
+                        </div>
+                    `;
+                    feedHtml += cardHtml;
+                }
+            }
+            
+            if(feedHtml) monitorFeedList.innerHTML = feedHtml;
+            else monitorFeedList.innerHTML = '<p class="text-gray-500 text-center p-4 text-lg">ยังไม่มีข้อมูลการเข้าเรียนสำหรับวันนี้</p>';
+        }
+
+        function displayMonitorSummary(summary) {
+            monitorSummary.innerHTML = `
+                <div class="bg-blue-100 p-4 rounded-lg shadow border border-blue-200">
+                    <p class="text-sm text-blue-700 font-semibold">มาเรียน (ปกติ)</p>
+                    <p class="text-3xl font-bold text-blue-900">${summary.present}</p>
+                </div>
+                <div class="bg-red-100 p-4 rounded-lg shadow border border-red-200">
+                    <p class="text-sm text-red-700 font-semibold">มาสาย</p>
+                    <p class="text-3xl font-bold text-red-900">${summary.late}</p>
+                </div>
+                <div class="bg-orange-100 p-4 rounded-lg shadow border border-orange-200">
+                    <p class="text-sm text-orange-700 font-semibold">ลา</p>
+                    <p class="text-3xl font-bold text-orange-900">${summary.absent}</p>
+                </div>
+                <div class="bg-gray-100 p-4 rounded-lg shadow border border-gray-200">
+                    <p class="text-sm text-gray-700 font-semibold">รวมทั้งหมด</p>
+                    <p class="text-3xl font-bold text-gray-900">${summary.total}</p>
+                </div>
+            `;
+        }
+
+        // --- Page 5 History Search Logic ---
+        
+        historyBackBtn.addEventListener('click', () => { showPage('admin-page'); });
+        historyLoadBtn.addEventListener('click', loadHistoryData);
+
+        async function loadHistoryData() {
+            const startDate = historyStartDate.value;
+            const endDate = historyEndDate.value;
+            const studentId = historyStudentIdFilter.value.trim(); 
+            const name = historyNameFilter.value.trim(); 
+            const level = historyLevelFilter.value.trim(); 
+            
+            if (!startDate || !endDate) {
+                showAlert('ข้อมูลไม่ครบ', 'กรุณาเลือกวันที่เริ่มต้นและสิ้นสุด', 'warning');
+                return;
+            }
+
+            showLoading('history-load', true);
+            historyTableBody.innerHTML = ''; 
+            historyNoData.classList.add('hidden');
+
+            const response = await callApi({
+                action: 'getAttendanceData',
+                startDate: startDate,
+                endDate: endDate,
+                studentIdFilter: studentId, 
+                nameFilter: name, 
+                levelFilter: level          
+            });
+            
+            showLoading('history-load', false);
+
+            if (response.success) {
+                displayHistoryTable(response.data.records);
+            } else {
+                showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลได้: ' + response.error);
+            }
+        }
+        
+        function displayHistoryTable(records) {
+            if (records.length === 0) {
+                historyNoData.classList.remove('hidden');
+                return;
+            }
+
+            let tableHtml = '';
+            for (const record of records) {
+                const timestamp = new Date(record.timestamp).toLocaleString('th-TH', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+                
+                let statusClass = '';
+                if (record.status.includes('สาย')) statusClass = 'text-red-600 font-semibold';
+                else if (record.status === 'ลา') statusClass = 'text-orange-600 font-semibold';
+                else statusClass = 'text-blue-600';
+
+                tableHtml += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="whitespace-nowrap">${timestamp}</td>
+                        <td class="whitespace-nowrap">${record.studentId}</td>
+                        <td>${record.name}</td>
+                        <td>${record.level || ''}</td> 
+                        <td class="${statusClass}">${record.status}</td>
+                        <td>${record.reason || ''}</td>
+                    </tr>
+                `;
+            }
+            historyTableBody.innerHTML = tableHtml;
+        }
+
+        historyExportPdfBtn.addEventListener('click', () => {
+            showLoading('history-export-pdf', true);
+            try {
+                if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+                    showAlert('PDF Error', 'ไม่สามารถโหลดไลบรารี jsPDF ได้', 'error');
+                    showLoading('history-export-pdf', false);
+                    return;
+                }
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const title = "รายงานการเข้าเรียน (ตามเงื่อนไข)";
+                const startDate = historyStartDate.value;
+                const endDate = historyEndDate.value;
+                const filterText = `ข้อมูลระหว่างวันที่: ${startDate} ถึง ${endDate}`;
+                let startY = 22; 
+
+                doc.setFontSize(18);
+                doc.text(title, 105, 15, { align: 'center' });
+                doc.setFontSize(10);
+                doc.text(filterText, 105, startY, { align: 'center' });
+                
+                const studentId = historyStudentIdFilter.value.trim();
+                const name = historyNameFilter.value.trim();
+                const level = historyLevelFilter.value.trim();
+                
+                let filterCount = 0;
+                if(studentId) {
+                    startY += (filterCount === 0 ? 7 : 5);
+                    doc.text(`รหัสนักศึกษา: ${studentId}`, 14, startY);
+                    filterCount++;
+                }
+                if(name) {
+                    startY += (filterCount === 0 ? 7 : 5);
+                    doc.text(`ชื่อ-สกุล: ${name}`, 14, startY);
+                    filterCount++;
+                }
+                if(level) {
+                    startY += (filterCount === 0 ? 7 : 5);
+                    doc.text(`ระดับชั้น: ${level}`, 14, startY);
+                    filterCount++;
+                }
+                
+                const bodyRows = historyTableBody.querySelectorAll('tr');
+                if (bodyRows.length === 0) {
+                    showAlert('ไม่สามารถสร้าง PDF', 'ไม่มีข้อมูลให้ส่งออก (กรุณากด "โหลดข้อมูล" ก่อน)', 'warning');
+                    showLoading('history-export-pdf', false);
+                    return;
+                }
+
+                doc.autoTable({
+                    html: '#history-table', 
+                    startY: startY + 5,
+                    theme: 'grid',
+                    styles: { fontSize: 8 },
+                    headStyles: {
+                        fillColor: [78, 52, 140], 
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold'
+                    }
+                });
+                const dateStr = new Date().toISOString().split('T')[0];
+                doc.save(`attendance_report_filtered_${dateStr}.pdf`);
+            } catch (e) {
+                console.error(e);
+                showAlert('PDF Error', 'เกิดข้อผิดพลาดในการสร้าง PDF: ' + e.message);
+            }
+            showLoading('history-export-pdf', false);
+        });
+        
+        historyExportCsvBtn.addEventListener('click', async () => {
+            const startDate = historyStartDate.value;
+            const endDate = historyEndDate.value;
+            const studentIdFilter = historyStudentIdFilter.value.trim(); 
+            const nameFilter = historyNameFilter.value.trim();
+            const levelFilter = historyLevelFilter.value.trim(); 
+
+            if (!startDate || !endDate) {
+                showAlert('ข้อมูลไม่ครบ', 'กรุณาเลือกวันที่เริ่มต้นและสิ้นสุด', 'warning');
+                return;
+            }
+            showLoading('history-export-csv', true);
+            const response = await callApi({ 
+                action: 'getFilteredExportData', 
+                startDate: startDate,
+                endDate: endDate,
+                studentIdFilter: studentIdFilter,
+                nameFilter: nameFilter,
+                levelFilter: levelFilter
+            });
+            showLoading('history-export-csv', false);
+
+            if (response.success && response.csvData) {
+                try {
+                    const blob = new Blob(["\uFEFF" + response.csvData], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    const dateStr = new Date().toISOString().split('T')[0];
+                    
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `attendance_export_filtered_${dateStr}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                } catch (e) {
+                    showAlert('ส่งออกล้มเหลว', 'เกิดข้อผิดพลาดในการสร้างไฟล์: ' + e.message);
+                }
+            } else {
+                 showAlert('ส่งออกล้มเหลว', 'ไม่สามารถดึงข้อมูลสำหรับส่งออกได้: ' + (response.error || 'ฟังก์ชันนี้อาจยังไม่ได้ถูกสร้างใน Code.gs'));
+            }
+        });
+
+        // --- Page 6 Approval Logic ---
+
+        adminApprovalBtn.addEventListener('click', () => {
+            showPage('approval-page');
+            loadUnapprovedData();
+        });
+
+        approvalBackBtn.addEventListener('click', () => {
+            showPage('admin-page');
+            approvalTableBody.innerHTML = ''; 
+            approvalNoData.classList.add('hidden');
+        });
+
+        approvalReloadBtn.addEventListener('click', loadUnapprovedData);
+
+        async function loadUnapprovedData() {
+            showLoading('approval-reload', true);
+            approvalTableBody.innerHTML = '';
+            approvalNoData.classList.add('hidden');
+
+            const response = await callApi({ action: 'getUnapprovedList' });
+            showLoading('approval-reload', false);
+
+            if (response.success) {
+                displayApprovalTable(response.data);
+            } else {
+                showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลที่รออนุมัติได้: ' + (response.error || 'โปรดตรวจสอบ Code.gs'));
+                approvalNoData.classList.remove('hidden');
+            }
+        }
+
+        function displayApprovalTable(records) {
+            if (!records || records.length === 0) {
+                approvalNoData.classList.remove('hidden');
+                return;
+            }
+
+            let tableHtml = '';
+            for (const record of records) {
+                if (!record.recordId) continue;
+                
+                const timestamp = new Date(record.timestamp).toLocaleString('th-TH', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+                
+                let statusClass = '';
+                if (record.status.includes('สาย')) statusClass = 'text-red-600 font-semibold';
+                else if (record.status === 'ลา') statusClass = 'text-orange-600 font-semibold';
+                else statusClass = 'text-blue-600';
+
+                tableHtml += `
+                    <tr class="hover:bg-gray-50" id="approve-row-${record.recordId}">
+                        <td class="whitespace-nowrap">${timestamp}</td>
+                        <td class="whitespace-nowrap">${record.studentId}</td>
+                        <td>${record.name}</td>
+                        <td class="${statusClass}">${record.status}</td>
+                        <td>${record.reason || ''}</td>
+                        <td>
+                            <button 
+                                class="approve-row-btn bg-purple-600 text-white font-bold py-1 px-3 rounded-lg hover:bg-purple-700" 
+                                data-record-id="${record.recordId}"
+                            >
+                                <span>อนุมัติ</span>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+            approvalTableBody.innerHTML = tableHtml;
+        }
+
+        approvalTableBody.addEventListener('click', async (e) => {
+            if (e.target && (e.target.classList.contains('approve-row-btn') || e.target.closest('.approve-row-btn'))) {
+                const button = e.target.closest('.approve-row-btn');
+                const recordId = button.dataset.recordId;
+                if (button.disabled) return; 
+                await approveRecord(recordId, button);
+            }
+        });
+
+        async function approveRecord(recordId, buttonEl) {
+            buttonEl.disabled = true;
+            buttonEl.innerHTML = '<div class="loader-small mx-auto"></div>';
+
+            const response = await callApi({
+                action: 'approveAttendance',
+                recordId: recordId 
+            });
+
+            if (response.success) {
+                buttonEl.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    <span>อนุมัติแล้ว</span>`;
+                buttonEl.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+                buttonEl.classList.add('bg-green-500', 'cursor-not-allowed');
+                setTimeout(() => {
+                    document.getElementById(`approve-row-${recordId}`).style.opacity = '0.5';
+                }, 1000);
+            } else {
+                showAlert('อนุมัติไม่สำเร็จ', response.error || 'ไม่สามารถอนุมัติได้ โปรดลองอีกครั้ง');
+                buttonEl.disabled = false;
+                buttonEl.innerHTML = '<span>อนุมัติ</span>';
+            }
+        }
+    </script>
+</body>
+</html>
